@@ -1,4 +1,4 @@
-package com.pickeringphenomenaguide
+package com.pickering.phenomena.guide
 
 import android.app.Application
 import com.facebook.react.PackageList
