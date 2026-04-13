@@ -1,4 +1,4 @@
-package com.pickering.phenomena.guide
+package com.pickeringnaturemoments
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
