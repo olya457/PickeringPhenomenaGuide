@@ -1,8 +1,11 @@
-import React, { createContext, useContext, useReducer } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Location, locations } from '../data/locations';
 import { BlogPost, blogPosts } from '../data/blogPosts';
 import { QuizQuestion, getRandomQuizQuestions } from '../data/questions';
 import { TravelTip, travelTips } from '../data/tips';
+
+const STORAGE_KEY = '@pickering_saved_state_v1';
 
 export interface AppState {
   onboarding: { completed: boolean };
@@ -31,6 +34,7 @@ export interface AppState {
     locationIds: number[];
     tipIds: number[];
   };
+  hydrated: boolean;
 }
 
 const initialState: AppState = {
@@ -60,6 +64,7 @@ const initialState: AppState = {
     locationIds: [],
     tipIds: [],
   },
+  hydrated: false,
 };
 
 type Action =
@@ -75,11 +80,19 @@ type Action =
   | { type: 'SET_TIP_CATEGORY'; payload: string }
   | { type: 'TOGGLE_TIP_EXPANDED'; payload: number }
   | { type: 'TOGGLE_TIP_SAVED'; payload: number }
-  | { type: 'SET_SAVED_TAB'; payload: 'Locations' | 'Tips' };
+  | { type: 'SET_SAVED_TAB'; payload: 'Locations' | 'Tips' }
+  | {
+      type: 'HYDRATE_SAVED';
+      payload: {
+        tab: 'Locations' | 'Tips';
+        locationIds: number[];
+        tipIds: number[];
+      };
+    }
+  | { type: 'SET_HYDRATED'; payload: boolean };
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
-
     case 'COMPLETE_ONBOARDING':
       return { ...state, onboarding: { completed: true } };
 
@@ -92,9 +105,16 @@ function reducer(state: AppState, action: Action): AppState {
     case 'TOGGLE_LOCATION_SAVED': {
       const ids = state.saved.locationIds;
       const newIds = ids.includes(action.payload)
-        ? ids.filter((id) => id !== action.payload)
+        ? ids.filter(id => id !== action.payload)
         : [...ids, action.payload];
-      return { ...state, saved: { ...state.saved, locationIds: newIds } };
+
+      return {
+        ...state,
+        saved: {
+          ...state.saved,
+          locationIds: newIds,
+        },
+      };
     }
 
     case 'SET_BLOG_TAB':
@@ -124,8 +144,10 @@ function reducer(state: AppState, action: Action): AppState {
 
     case 'SELECT_ANSWER': {
       if (state.quiz.selectedAnswer !== null) return state;
+
       const q = state.quiz.questions[state.quiz.currentIndex];
       const correct = action.payload === q.correctAnswer;
+
       return {
         ...state,
         quiz: {
@@ -138,6 +160,7 @@ function reducer(state: AppState, action: Action): AppState {
 
     case 'NEXT_QUESTION': {
       const hasNext = state.quiz.currentIndex + 1 < state.quiz.questions.length;
+
       return {
         ...state,
         quiz: {
@@ -176,13 +199,36 @@ function reducer(state: AppState, action: Action): AppState {
     case 'TOGGLE_TIP_SAVED': {
       const ids = state.saved.tipIds;
       const newIds = ids.includes(action.payload)
-        ? ids.filter((id) => id !== action.payload)
+        ? ids.filter(id => id !== action.payload)
         : [...ids, action.payload];
-      return { ...state, saved: { ...state.saved, tipIds: newIds } };
+
+      return {
+        ...state,
+        saved: {
+          ...state.saved,
+          tipIds: newIds,
+        },
+      };
     }
 
     case 'SET_SAVED_TAB':
       return { ...state, saved: { ...state.saved, tab: action.payload } };
+
+    case 'HYDRATE_SAVED':
+      return {
+        ...state,
+        saved: {
+          tab: action.payload.tab,
+          locationIds: action.payload.locationIds,
+          tipIds: action.payload.tipIds,
+        },
+      };
+
+    case 'SET_HYDRATED':
+      return {
+        ...state,
+        hydrated: action.payload,
+      };
 
     default:
       return state;
@@ -196,8 +242,57 @@ const AppContext = createContext<{
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+
+  useEffect(() => {
+    const loadSavedState = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(STORAGE_KEY);
+
+        if (raw) {
+          const parsed = JSON.parse(raw);
+
+          dispatch({
+            type: 'HYDRATE_SAVED',
+            payload: {
+              tab: parsed.tab === 'Tips' ? 'Tips' : 'Locations',
+              locationIds: Array.isArray(parsed.locationIds) ? parsed.locationIds : [],
+              tipIds: Array.isArray(parsed.tipIds) ? parsed.tipIds : [],
+            },
+          });
+        }
+      } catch (e) {
+      } finally {
+        dispatch({ type: 'SET_HYDRATED', payload: true });
+      }
+    };
+
+    loadSavedState();
+  }, []);
+
+  useEffect(() => {
+    if (!state.hydrated) return;
+
+    const saveState = async () => {
+      try {
+        await AsyncStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({
+            tab: state.saved.tab,
+            locationIds: state.saved.locationIds,
+            tipIds: state.saved.tipIds,
+          })
+        );
+      } catch (e) {
+      }
+    };
+
+    saveState();
+  }, [state.saved, state.hydrated]);
+
+  const value = useMemo(() => ({ state, dispatch }), [state]);
+
   return (
-    <AppContext.Provider value={{ state, dispatch }}>
+    <AppContext.Provider value={value}>
       {children}
     </AppContext.Provider>
   );

@@ -21,13 +21,13 @@ const isNarrow = width < 370;
 export function QuizResultScreen({ route, navigation }: Props) {
   const { dispatch } = useAppContext();
   const { score, total } = route.params;
-  const pct = Math.round((score / total) * 100);
+  const pct = total > 0 ? Math.round((score / total) * 100) : 0;
 
   const getMessage = (): string => {
-    if (pct >= 80) return 'Outstanding! You\'re a Pickering expert!';
+    if (pct >= 80) return "Outstanding! You're a Pickering expert!";
     if (pct >= 60) return 'Great job exploring your knowledge!';
     if (pct >= 40) return 'Good effort! Keep exploring!';
-    return 'Keep learning about Pickering\'s wonders!';
+    return "Keep learning about Pickering's wonders!";
   };
 
   return (
@@ -39,7 +39,9 @@ export function QuizResultScreen({ route, navigation }: Props) {
       <Text style={styles.message}>{getMessage()}</Text>
 
       <View style={styles.scoreCard}>
-        <Text style={styles.scoreMain}>{score}/{total}</Text>
+        <Text style={styles.scoreMain}>
+          {score}/{total}
+        </Text>
         <Text style={styles.scoreLabel}>Correct Answers</Text>
 
         <View style={styles.divider} />
@@ -54,6 +56,7 @@ export function QuizResultScreen({ route, navigation }: Props) {
           dispatch({ type: 'RESTART_QUIZ' });
           navigation.replace('Quiz');
         }}
+        activeOpacity={0.9}
       >
         <Text style={styles.retryText}>↺ Try Again</Text>
       </TouchableOpacity>
@@ -61,6 +64,7 @@ export function QuizResultScreen({ route, navigation }: Props) {
       <TouchableOpacity
         style={styles.homeBtn}
         onPress={() => navigation.getParent()?.navigate('LocationsTab')}
+        activeOpacity={0.9}
       >
         <Text style={styles.homeText}>Explore Locations</Text>
       </TouchableOpacity>

@@ -5,6 +5,7 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAppContext } from '../../context/AppContext';
@@ -24,6 +25,14 @@ export function SavedScreen() {
   const savedTips: TravelTip[] = state.tips.items.filter(
     (t: TravelTip) => state.saved.tipIds.includes(t.id)
   );
+
+  if (!state.hydrated) {
+    return (
+      <View style={styles.loaderWrap}>
+        <ActivityIndicator size="small" color="#E24B4A" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -159,6 +168,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0D0D0D',
   },
+  loaderWrap: {
+    flex: 1,
+    backgroundColor: '#0D0D0D',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   subtitle: {
     color: '#9A9A9A',
     fontSize: 13,
@@ -229,6 +244,7 @@ const styles = StyleSheet.create({
   badgeRow: {
     flexDirection: 'row',
     gap: 6,
+    flexWrap: 'wrap',
   },
   badge: {
     paddingHorizontal: 8,

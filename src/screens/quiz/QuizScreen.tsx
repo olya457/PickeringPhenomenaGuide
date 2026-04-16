@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -29,25 +29,17 @@ export function QuizScreen({ navigation }: Props) {
   const { state, dispatch } = useAppContext();
   const { questions, currentIndex, score, selectedAnswer, isFinished } = state.quiz;
 
-  const shuffledQuestions = useMemo(() => {
-    const cloned = [...questions];
-    for (let i = cloned.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [cloned[i], cloned[j]] = [cloned[j], cloned[i]];
-    }
-    return cloned.slice(0, 10);
-  }, [questions]);
-
   useEffect(() => {
     if (isFinished) {
       navigation.replace('QuizResult', {
         score,
-        total: shuffledQuestions.length,
+        total: questions.length,
       });
     }
-  }, [isFinished]);
+  }, [isFinished, navigation, score, questions.length]);
 
-  const q: QuizQuestion = shuffledQuestions[currentIndex];
+  const q: QuizQuestion | undefined = questions[currentIndex];
+
   if (!q) return null;
 
   const getColor = (i: number) => {
@@ -73,7 +65,7 @@ export function QuizScreen({ navigation }: Props) {
     >
       <View style={styles.topBar}>
         <Text style={styles.progress}>
-          Question {currentIndex + 1} of {shuffledQuestions.length}
+          Question {currentIndex + 1} of {questions.length}
         </Text>
         <Text style={styles.score}>Score: {score}</Text>
       </View>
@@ -82,7 +74,7 @@ export function QuizScreen({ navigation }: Props) {
         <View
           style={[
             styles.progressBarFill,
-            { width: `${((currentIndex + 1) / shuffledQuestions.length) * 100}%` },
+            { width: `${((currentIndex + 1) / questions.length) * 100}%` },
           ]}
         />
       </View>
@@ -99,6 +91,7 @@ export function QuizScreen({ navigation }: Props) {
             ]}
             onPress={() => dispatch({ type: 'SELECT_ANSWER', payload: i })}
             disabled={selectedAnswer !== null}
+            activeOpacity={0.9}
           >
             <Text style={styles.answerText}>{option}</Text>
           </TouchableOpacity>
@@ -109,9 +102,10 @@ export function QuizScreen({ navigation }: Props) {
         <TouchableOpacity
           style={styles.nextBtn}
           onPress={() => dispatch({ type: 'NEXT_QUESTION' })}
+          activeOpacity={0.9}
         >
           <Text style={styles.nextText}>
-            {currentIndex + 1 === shuffledQuestions.length
+            {currentIndex + 1 === questions.length
               ? 'See Results'
               : 'Next Question →'}
           </Text>
@@ -132,9 +126,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 10,
+    gap: 10,
   },
-  progress: { color: '#9A9A9A' },
-  score: { color: '#1D9E75', fontWeight: '600' },
+  progress: {
+    color: '#9A9A9A',
+    fontSize: isVerySmall ? 13 : 14,
+    flexShrink: 1,
+  },
+  score: {
+    color: '#1D9E75',
+    fontWeight: '600',
+    fontSize: isVerySmall ? 13 : 14,
+  },
   progressBarBg: {
     height: 5,
     backgroundColor: '#1A1A1A',
@@ -147,18 +150,26 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   question: {
-    fontSize: 20,
+    fontSize: isVerySmall ? 18 : isSmall ? 19 : 20,
     fontWeight: '700',
     color: '#fff',
     marginBottom: 20,
+    lineHeight: isVerySmall ? 26 : 28,
   },
-  answers: { gap: 10 },
+  answers: {
+    gap: 10,
+  },
   answerBtn: {
-    padding: 14,
+    paddingVertical: isVerySmall ? 13 : 14,
+    paddingHorizontal: isNarrow ? 12 : 14,
     borderRadius: 12,
     borderWidth: 1,
   },
-  answerText: { color: '#fff' },
+  answerText: {
+    color: '#fff',
+    fontSize: isVerySmall ? 14 : 15,
+    lineHeight: isVerySmall ? 20 : 22,
+  },
   nextBtn: {
     backgroundColor: '#E24B4A',
     height: 56,
@@ -167,5 +178,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 20,
   },
-  nextText: { color: '#fff', fontWeight: '700' },
+  nextText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: isVerySmall ? 15 : 16,
+  },
 });
