@@ -14,6 +14,26 @@ if linkage != nil
   use_frameworks! :linkage => linkage.to_sym
 end
 
+def patch_fmt_consteval_for_xcode_26_4(installer)
+  fmt_base = File.join(installer.sandbox.root, 'fmt', 'include', 'fmt', 'base.h')
+  return unless File.exist?(fmt_base)
+
+  content = File.read(fmt_base)
+  marker = 'Xcode 26.4 workaround: disable fmt consteval'
+  return if content.include?(marker)
+
+  patched = content.gsub(
+    /^(#elif defined\(__cpp_consteval\)\n#  define FMT_USE_CONSTEVAL) 1/,
+    "// #{marker}\n\\1 0"
+  )
+
+  if patched != content
+    File.chmod(0644, fmt_base)
+    File.write(fmt_base, patched)
+    Pod::UI.puts 'Applied Xcode 26.4 fmt consteval workaround'.yellow
+  end
+end
+
 target 'PickeringPhenomenaGuide' do
   config = use_native_modules!
 
@@ -31,5 +51,6 @@ target 'PickeringPhenomenaGuide' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+    patch_fmt_consteval_for_xcode_26_4(installer)
   end
 end
